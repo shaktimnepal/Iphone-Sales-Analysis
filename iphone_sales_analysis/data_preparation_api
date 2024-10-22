@@ -1,1 +1,39 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
+from sales_data_collector_api import sales_data_collector_api
+from product_data_collector_api import product_data_collector_api
 
+def data_preparation_api(spark, product_hive_table, sales_hive_table, target_hive_table):
+    # Load product and sales data from Hive tables
+    product_df = spark.table(product_hive_table).alias("products")
+    sales_df = spark.table(sales_hive_table).alias("sales")
+
+    product_df.show()
+    sales_df.show()
+
+    # Filter product IDs for 'S8' and 'iPhone'
+    s8_id = product_df.filter(col("product_name") == "S8").select("product_id").first()[0]
+    iphone_id = product_df.filter(col("product_name") == "iPhone").select("product_id").first()[0]
+
+    # Find buyers who bought S8 but not iPhone
+    buyers_s8 = sales_df.filter(col("product_id") == s8_id).select("buyer_id").distinct()
+    buyers_iphone = sales_df.filter(col("product_id") == iphone_id).select("buyer_id").distinct()
+
+    # Perform anti-join to get buyers who bought S8 but not iPhone
+    buyers_only_s8 = buyers_s8.join(buyers_iphone, "buyer_id", "left_anti")
+
+    # Save the result to the target Hive table
+    buyers_only_s8.write.mode("overwrite").saveAsTable(target_hive_table)
+
+    return target_hive_table
+
+if __name__ == '__main__':
+    # Initialize Spark session with Hive support
+    spark = SparkSession.builder.appName("Data Preparation").enableHiveSupport().getOrCreate()
+    # Define the Hive table names
+    product_table = "iphone_sales_analysis.product_hive_table"
+    sales_table = "iphone_sales_analysis.sales_hive_table"
+    target_table = "iphone_sales_analysis.target_hive_table"
+
+    # Call the data preparation function
+    data_preparation_api(spark, product_table, sales_table, target_table)
