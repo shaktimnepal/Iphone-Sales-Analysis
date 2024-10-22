@@ -1,15 +1,12 @@
+Python code:
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
-from sales_data_collector_api import sales_data_collector_api
-from product_data_collector_api import product_data_collector_api
 
 def data_preparation_api(spark, product_hive_table, sales_hive_table, target_hive_table):
     # Load product and sales data from Hive tables
     product_df = spark.table(product_hive_table).alias("products")
     sales_df = spark.table(sales_hive_table).alias("sales")
-
-    product_df.show()
-    sales_df.show()
 
     # Filter product IDs for 'S8' and 'iPhone'
     s8_id = product_df.filter(col("product_name") == "S8").select("product_id").first()[0]
@@ -27,13 +24,15 @@ def data_preparation_api(spark, product_hive_table, sales_hive_table, target_hiv
 
     return target_hive_table
 
+
+
 if __name__ == '__main__':
     # Initialize Spark session with Hive support
     spark = SparkSession.builder.appName("Data Preparation").enableHiveSupport().getOrCreate()
     # Define the Hive table names
-    product_table = "iphone_sales_analysis.product_hive_table"
-    sales_table = "iphone_sales_analysis.sales_hive_table"
-    target_table = "iphone_sales_analysis.target_hive_table"
+    product_table = "iphone_sales_analysis1.product_hive_table"
+    sales_table = "iphone_sales_analysis1.sales_hive_table"
+    target_table = "iphone_sales_analysis1.target_hive_table"
 
     # Call the data preparation function
     data_preparation_api(spark, product_table, sales_table, target_table)
