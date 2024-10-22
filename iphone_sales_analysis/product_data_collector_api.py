@@ -1,29 +1,30 @@
 Python code:
 
-from pyspark.sql import SparkSession
+# Initialize Spark session with Hive support
+spark = SparkSession.builder \
+    .appName("Product Data Collector") \
+    .enableHiveSupport() \
+    .getOrCreate()
 
-# Initialize Spark session
-spark = SparkSession.builder.appName("Product Data Collector").enableHiveSupport().getOrCreate()
+def product_data_collector_api(spark, text_file_path, parquet_file_path):
+    # Step 1: Load the CSV data from the text file with '|' delimiter
+    product_df = spark.read.option("header", True).option("delimiter", "|").csv(text_file_path)
 
-def product_data_collector_api(spark, parquet_file_path):
-    # Load the product data from the parquet file
-    product_df = spark.read.parquet(parquet_file_path)
+    # Step 2: Write the DataFrame to Parquet format
+    product_df.write.mode("overwrite").parquet(parquet_file_path)
 
-    # Save the data to a non-partitioned Hive table
-    product_df.write.mode("overwrite").saveAsTable("iphone_sales_analysis.product_hive_table")
+    # Step 3: Read the Parquet data back into a DataFrame
+    parquet_df = spark.read.parquet(parquet_file_path)
 
-    return "iphone_sales_analysis.product_hive_table"
+    # Step 4: Write the data to a Hive table from the Parquet DataFrame
+    parquet_df.write.mode("overwrite").saveAsTable("iphone_sales_analysis1.product_hive_table")
+
+    return "iphone_sales_analysis1.product_hive_table"
 
 if __name__ == '__main__':
-    #File paths
-    csv_file_path = 'file:///home/takeo/data/iphone_sales_analysis_project/product_data/product_data_csv'
-    parquet_file_path = 'file:///home/takeo/data/iphone_sales_analysis_project/product_data/product_data_parquet'
+    # Define file paths
+    csv_filepath = 'file:///home/takeo/data/iphone_sales_analysis_project/product_data/product_data_csv'
+    parquet_filepath = 'file:///home/takeo/data/iphone_sales_analysis_project/product_data/product_data_parquet'
 
-    #Load CSV data into a dataFrame
-    df = spark.read.csv(csv_file_path, header = True, inferSchema = True)
-
-    #Write dataFrame to parquet format
-    df.write.parquet(parquet_file_path, mode = 'overwrite')
-
-    #Call function product_data_collector_api after the csv data has been converted into parquet data
-    product_data_collector_api(spark, parquet_file_path)
+    # Call the product data collector function
+    product_data_collector_api(spark, csv_filepath, parquet_filepath)
